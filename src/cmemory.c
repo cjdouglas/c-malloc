@@ -15,10 +15,12 @@ typedef struct _cmemory_block {
 
 cmemory_block_t head = {.size = 0, .next = NULL};
 
-void _print_block(cmemory_block_t* block) {
+void _print_block(cmemory_block_t* block, size_t offset) {
   printf("START BLOCK -------- [\n");
   printf("[addr = %p]\n", (void*)block);
   printf("[size = %lu bytes    ]\n", block->size);
+  printf("[end  = %p]\n",
+         (char*)block + block->size + sizeof(cmemory_block_t) + offset);
   printf("] ---------  END BLOCK\n\n");
 }
 
@@ -28,7 +30,6 @@ void* _align(void* base_ptr) {
   return (void*)(offset & mask);
 }
 
-// Removes the block from the free list
 void _delete_block(cmemory_block_t* block) {
   cmemory_block_t* temp = &head;
   while (temp->next && temp->next != block) {
@@ -39,6 +40,8 @@ void _delete_block(cmemory_block_t* block) {
     temp->next = block->next;
   }
 }
+
+// void _restore_block(cmemory_block_t* block) {}
 
 int _init_list() {
   cmemory_block_t* chunk = mmap(NULL, _CM_DEFAULT_CHUNK, PROT_READ | PROT_WRITE,
@@ -54,40 +57,42 @@ int _init_list() {
 }
 
 void* cm_malloc(size_t size) {
-  printf("searching for %lu bytes\n", size + sizeof(cmemory_block_t));
   if (!head.next) {
     if (_init_list() == _CM_ALLOC_FAIL) {
       return NULL;
     }
   }
 
+  // TODO: move this to a separate function so we don't write code twice
+  const size_t request_size = size + sizeof(cmemory_block_t) + (_CM_ALIGN - 1);
   cmemory_block_t* block = head.next;
   while (block) {
-    if (block->size >= size + sizeof(cmemory_block_t)) {
-      // Get a pointer to the actual usable space
-      void* ptr = (char*)block + sizeof(cmemory_block_t);
+    if (block->size >= request_size) {
+      char* raw_ptr = (char*)block + sizeof(cmemory_block_t);
+      char* aligned_ptr = (char*)_align(raw_ptr);
+      const size_t offset = (size_t)aligned_ptr - (size_t)raw_ptr;
 
-      // Find the address for the next metadata struct
-      char* next_addr = (char*)block + size + sizeof(cmemory_block_t);
-
-      // Create a new block in that location
+      char* next_addr = aligned_ptr + size;
       cmemory_block_t* next = (cmemory_block_t*)next_addr;
-      next->size = block->size - size - sizeof(cmemory_block_t);
+      next->size = block->size - size - sizeof(cmemory_block_t) - offset;
       next->next = NULL;
 
-      // Set the final metadata of the block, and remove from the free list
       block->next = next;
       block->size = size;
+      _print_block(block, offset);
       _delete_block(block);
 
-      // Return the saved memory address
-      return ptr;
+      return aligned_ptr;
     }
     block = block->next;
   }
+
+  // TODO: try extending the volume here
+
+  // TODO: search again
 
   printf("No available space found!\n");
   return NULL;
 }
 
-void cm_free(void* ptr) {}
+void cm_free(void* ptr) { printf("TODO: free %p\n", ptr); }
