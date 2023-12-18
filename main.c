@@ -43,14 +43,22 @@ int main() {
   double* m = cm_malloc(sizeof *m);
   if (m) {
     *m = 3.5;
+    // printf("m pointer: %p\n", m);
   }
 
   double* n = cm_malloc(sizeof *n);
   if (n) {
     *n = 3.7;
+    // printf("n pointer: %p\n", n);
   }
 
   float* p = cm_malloc(sizeof *p);
+  if (p) {
+    *p = 1.2f;
+    // printf("p pointer: %p\n\n", p);
+  }
+
+  cm_free(lst);
 
   return 0;
 }
