@@ -7,58 +7,52 @@ typedef struct _large_struct {
   char str[32];
 } large_struct_t;
 
+typedef struct _smaller_struct {
+  int arr[60];
+  char str[29];
+} smaller_struct_t;
+
 int main() {
   // printf("sizeof large_struct_t = %lu\n", sizeof(large_struct_t));
 
   int* i = cm_malloc(sizeof *i);
-  if (i) {
-    *i = 42;
-    // printf("i pointer: %p\n", i);
-    // printf("i value  : %d\n", *i);
+  if (!i) {
+    printf("i alloc failed\n");
   }
 
   int* j = cm_malloc(sizeof *j);
-  if (j) {
-    *j = 43;
-    // printf("j pointer: %p\n", j);
-    // printf("j value  : %d\n", *j);
-  }
-
-  large_struct_t* lst = cm_malloc(sizeof *lst);
-  if (lst) {
-    lst->arr[0] = 53;
-    lst->str[0] = 'a';
-    // printf("lst pointer: %p\n", lst);
-    // printf("arr[0] value  : %d\n", lst->arr[0]);
-    // printf("str[0] value  : %c\n", lst->str[0]);
+  if (!j) {
+    printf("j alloc failed\n");
   }
 
   int* k = cm_malloc(sizeof *k);
-  if (k) {
-    *k = 69;
-    // printf("k pointer: %p\n", k);
-    // printf("k value  : %d\n", *k);
+  if (!k) {
+    printf("k alloc failed\n");
   }
 
-  double* m = cm_malloc(sizeof *m);
-  if (m) {
-    *m = 3.5;
-    // printf("m pointer: %p\n", m);
+  large_struct_t* lst = cm_malloc(sizeof *lst);
+  if (!lst) {
+    printf("lst alloc failed\n");
   }
 
-  double* n = cm_malloc(sizeof *n);
-  if (n) {
-    *n = 3.7;
-    // printf("n pointer: %p\n", n);
+  smaller_struct_t* sst = cm_malloc(sizeof *sst);
+  if (!sst) {
+    printf("sst alloc failed\n");
   }
 
-  float* p = cm_malloc(sizeof *p);
-  if (p) {
-    *p = 1.2f;
-    // printf("p pointer: %p\n\n", p);
+  const size_t n_bytes = 3420;
+  char* large_block = cm_malloc(n_bytes * sizeof *large_block);
+  if (!large_block) {
+    printf("large_block alloc failed\n");
   }
 
   cm_free(lst);
+  cm_free(sst);
+  cm_free(i);
+  cm_free(j);
+  cm_free(k);
+  cm_free(large_block);
+  cm_dump_core();
 
   return 0;
 }
