@@ -21,11 +21,21 @@ void _print_block(cmemory_block_t* block) {
   void* start = (void*)block;
   void* end = (void*)((char*)block + _CM_META_SIZE + block->size);
 
-  printf("START BLOCK -------- [\n");
+  printf("--------------------------------\n");
   printf("[addr = %p]\n", start);
-  printf("[size = %lu bytes    ]\n", block->size);
+  printf("[size = %lu bytes    ]\n", block->size + _CM_META_SIZE);
   printf("[end  = %p]\n", end);
-  printf("] ---------  END BLOCK\n\n");
+  printf("--------------------------------\n");
+}
+
+void _dump_blocks() {
+  cmemory_block_t* current = head.next;
+  printf("START BLOCK DUMP\n");
+  while (current) {
+    _print_block(current);
+    current = current->next;
+  }
+  printf("END BLOCK DUMP\n\n");
 }
 
 void* _align(void* base_ptr) {
@@ -45,7 +55,29 @@ void _delete_block(cmemory_block_t* block) {
   }
 }
 
-// void _restore_block(cmemory_block_t* block) {}
+void _reclaim_block(cmemory_block_t* block) {
+  cmemory_block_t* prev = &head;
+  cmemory_block_t* current = head.next;
+  while (current) {
+    // Find a block that has an address greater than block.
+    // We should coalesce if the distance between is <= _CM_META_SIZE
+    const ptrdiff_t dist = (ptrdiff_t)((char*)current - (char*)block);
+    if (dist < 0) {
+      prev = current;
+      current = current->next;
+      continue;
+    }
+
+    // We have a match
+    prev->next = block;
+    block->next = current;
+
+    // TODO: coalesce here
+    return;
+  }
+
+  prev->next = block;
+}
 
 // This function expands our heap by _CM_DEFAULT_CHUNK + request size.
 int _expand(size_t size) {
@@ -72,7 +104,7 @@ int _expand(size_t size) {
 }
 
 void* _find_block(size_t size) {
-  const size_t request_size = size + _CM_META_SIZE + (_CM_ALIGN - 1);
+  const size_t request_size = size + _CM_META_SIZE;
   cmemory_block_t* block = head.next;
 
   while (block) {
@@ -126,7 +158,5 @@ void* cm_malloc(size_t size) {
 void cm_free(void* ptr) {
   char* raw_addr = (char*)ptr - _CM_META_SIZE;
   cmemory_block_t* block = (cmemory_block_t*)raw_addr;
-  _print_block(block);
-
-  // TODO: add this block back to the list, and coalesce if possible
+  _reclaim_block(block);
 }
